@@ -9,6 +9,15 @@ function ScrollArea({
   children,
   ...props
 }: ScrollAreaPrimitive.Root.Props) {
+  const bars: React.ReactNode[] = []
+  const content: React.ReactNode[] = []
+  React.Children.forEach(children, (child) => {
+    if (React.isValidElement(child) && child.type === ScrollBar) {
+      bars.push(child)
+      return
+    }
+    content.push(child)
+  })
   return (
     <ScrollAreaPrimitive.Root
       data-slot="scroll-area"
@@ -19,9 +28,10 @@ function ScrollArea({
         data-slot="scroll-area-viewport"
         className="size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1"
       >
-        {children}
+        <ScrollAreaPrimitive.Content>{content}</ScrollAreaPrimitive.Content>
       </ScrollAreaPrimitive.Viewport>
       <ScrollBar />
+      {bars}
       <ScrollAreaPrimitive.Corner />
     </ScrollAreaPrimitive.Root>
   )
@@ -45,7 +55,7 @@ function ScrollBar({
     >
       <ScrollAreaPrimitive.Thumb
         data-slot="scroll-area-thumb"
-        className="relative flex-1 rounded-full bg-border"
+        className="relative flex-1 rounded-full bg-border transition-colors hover:bg-foreground/30"
       />
     </ScrollAreaPrimitive.Scrollbar>
   )

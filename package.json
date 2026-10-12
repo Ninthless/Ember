@@ -1,7 +1,7 @@
 {
   "name": "spark-desktop",
   "version": "0.1.0",
-  "description": "一键续火花",
+  "description": "Ember keeps private-chat sparks going",
   "author": "spark",
   "main": "./out/main/index.js",
   "scripts": {

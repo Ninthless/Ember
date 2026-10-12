@@ -366,7 +366,7 @@ export default function App() {
                 <FlameIcon className="size-4" />
               </span>
               <div className="min-w-0">
-                <div className="truncate text-sm font-semibold">续火花</div>
+                <div className="truncate text-sm font-semibold">Ember</div>
                 <div className="truncate text-xs text-sidebar-foreground/70">单聊续火</div>
               </div>
             </div>

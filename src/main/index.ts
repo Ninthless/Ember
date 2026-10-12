@@ -45,7 +45,7 @@ function createWindow(): BrowserWindow {
     minHeight: 680,
     show: false,
     autoHideMenuBar: true,
-    title: "续火花",
+    title: "Ember",
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       contextIsolation: true,

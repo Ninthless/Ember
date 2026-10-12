@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
@@ -14,12 +14,12 @@ export function SchedulePage({ autoSend, runAt, onAutoSend, onTime }: Props) {
   return (
     <div className="min-h-0 flex-1 overflow-auto p-4">
       <Card className="max-w-xl">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>到点自动续火</CardTitle>
-            <CardDescription>窗口要开着才会跑。关掉就不会自己发。</CardDescription>
-          </div>
-          <Switch checked={autoSend} onCheckedChange={onAutoSend} />
+        <CardHeader>
+          <CardTitle>到点自动续火</CardTitle>
+          <CardDescription>窗口要开着才会跑。关掉就不会自己发。</CardDescription>
+          <CardAction>
+            <Switch checked={autoSend} onCheckedChange={onAutoSend} />
+          </CardAction>
         </CardHeader>
         <CardContent className="grid max-w-sm gap-4">
           <Label className="grid gap-2">

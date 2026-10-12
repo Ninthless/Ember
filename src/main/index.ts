@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, session, shell, type Session } from "electron"
+import { existsSync } from "fs"
 import { join } from "path"
 import { chromeClientHint, chromeUserAgent } from "../shared/browser-ua"
 import { containContents, installGuestSchemeHandlers, registerGuestSchemes } from "./guest-schemes"
@@ -12,6 +13,16 @@ const CHROME_UA = chromeUserAgent(CHROME_VERSION)
 const CHROME_HINT = chromeClientHint(CHROME_VERSION)
 
 app.userAgentFallback = CHROME_UA
+app.setAppUserModelId("Ember")
+
+function windowIcon(): string | undefined {
+  const ico = join(app.getAppPath(), "resources", "icon.ico")
+  if (existsSync(ico)) {
+    return ico
+  }
+  const png = join(app.getAppPath(), "resources", "icon.png")
+  return existsSync(png) ? png : undefined
+}
 
 function prepareGuestSession(): Session {
   const guest = session.fromPartition("persist:douyin")
@@ -44,8 +55,12 @@ function createWindow(): BrowserWindow {
     minWidth: 1080,
     minHeight: 680,
     show: false,
+    frame: false,
     autoHideMenuBar: true,
+    roundedCorners: true,
+    backgroundColor: "#fafafa",
     title: "Ember",
+    icon: windowIcon(),
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       contextIsolation: true,
@@ -55,6 +70,13 @@ function createWindow(): BrowserWindow {
     }
   })
   win.on("ready-to-show", () => win.show())
+  const notifyMaximized = (value: boolean) => {
+    if (!win.isDestroyed()) {
+      win.webContents.send("window:maximized", value)
+    }
+  }
+  win.on("maximize", () => notifyMaximized(true))
+  win.on("unmaximize", () => notifyMaximized(false))
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith("https://")) {
       shell.openExternal(url)
@@ -96,6 +118,31 @@ app.whenReady().then(() => {
   )
   ipcMain.handle("settings:get", () => readSettings())
   ipcMain.handle("settings:save", (_event, input: unknown) => writeSettings(input))
+  ipcMain.handle("window:minimize", (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.minimize()
+  })
+  ipcMain.handle("window:toggle-maximize", (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) {
+      return false
+    }
+    if (win.isMaximized()) {
+      win.unmaximize()
+    } else {
+      win.maximize()
+    }
+    return win.isMaximized()
+  })
+  ipcMain.handle("window:close", (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.close()
+  })
+  ipcMain.handle("window:is-maximized", (event) => BrowserWindow.fromWebContents(event.sender)?.isMaximized() ?? false)
+  ipcMain.handle("window:set-background", (event, color: unknown) => {
+    if (typeof color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(color)) {
+      return
+    }
+    BrowserWindow.fromWebContents(event.sender)?.setBackgroundColor(color)
+  })
   createWindow()
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

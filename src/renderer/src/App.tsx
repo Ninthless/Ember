@@ -1,18 +1,18 @@
 import type { WebviewTag } from "electron"
 import { useEffect, useRef, useState } from "react"
 import { Clock3Icon, FlameIcon, LogInIcon } from "lucide-react"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarSeparator } from "@/components/ui/sidebar"
-import { TooltipProvider } from "@/components/ui/tooltip"
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider } from "@/components/ui/sidebar"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { toast } from "sonner"
 import { frontierCursorScript } from "@shared/frontier-watch"
 import { applySentToday, type SparkRow } from "@shared/inbox"
 import { dueBlocked } from "@shared/select"
 import { DEFAULT_SETTINGS, normalizeSettings, type Settings } from "@shared/settings"
 import { ChatFrame } from "./chat-frame"
+import { TitleBar } from "./title-bar"
 import { CHAT_URL } from "./guest"
-import { LoginPage } from "./pages/login-page"
 import { SchedulePage } from "./pages/schedule-page"
 import { SparksPage } from "./pages/sparks-page"
 import { enrichInbox, readInbox, readProfile, renewDue, sendChecked, type ProfileView, type RenewResult } from "./renew"
@@ -42,6 +42,17 @@ export default function App() {
   const [busy, setBusy] = useState(false)
   const [kicked, setKicked] = useState(false)
   const [notice, setNotice] = useState<RenewResult | null>(null)
+  useEffect(() => {
+    if (!notice || notice.lines.length === 0) {
+      return
+    }
+    const description = notice.lines.map((line) => `${line.name || line.uid || "会话"} ${line.detail}`).join("；")
+    if (notice.stopped === "kick") {
+      toast.error("登录被弹掉了", { description })
+      return
+    }
+    toast("结果", { description })
+  }, [notice])
 
   useEffect(() => {
     void window.spark.getSettings().then((loaded) => {
@@ -357,19 +368,25 @@ export default function App() {
   const renewBlocked = dueBlocked(settings.limited, settings.picked)
 
   return (
-    <TooltipProvider>
-      <SidebarProvider className="h-svh gap-2 overflow-hidden bg-sidebar p-2">
-        <Sidebar collapsible="none" className="h-auto min-h-0 rounded-xl border border-sidebar-border">
-          <SidebarHeader className="px-3 py-4">
-            <div className="flex items-center gap-2">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <FlameIcon className="size-4" />
-              </span>
-              <div className="min-w-0">
-                <div className="truncate text-sm font-semibold">Ember</div>
-                <div className="truncate text-xs text-sidebar-foreground/70">单聊续火</div>
-              </div>
-            </div>
+    <div className="flex h-svh flex-col overflow-hidden bg-sidebar">
+      <TitleBar />
+      <TooltipProvider>
+      <SidebarProvider className="min-h-0 w-full flex-1 overflow-hidden">
+        <Sidebar collapsible="none" className="h-full min-h-0">
+          <SidebarHeader>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton size="lg" tabIndex={-1} className="pointer-events-none hover:bg-transparent">
+                  <span className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                    <FlameIcon className="size-4" />
+                  </span>
+                  <span className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-medium">Ember</span>
+                    <span className="truncate text-xs">单聊续火</span>
+                  </span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
           </SidebarHeader>
           <SidebarContent>
             <SidebarGroup>
@@ -387,32 +404,27 @@ export default function App() {
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
-          <SidebarSeparator />
-          <SidebarFooter>
-            <div className="rounded-lg border border-sidebar-border px-3 py-2">
-              <div className="text-xs text-sidebar-foreground/70">当前账号</div>
-              <div className="truncate text-sm font-medium">{status.title}</div>
-              <div className="truncate text-xs text-sidebar-foreground/70">{status.detail}</div>
-            </div>
-          </SidebarFooter>
         </Sidebar>
-        <SidebarInset className="min-h-0 min-w-0 overflow-hidden rounded-xl border bg-background shadow-sm">
-          <header className="flex h-14 shrink-0 items-center gap-4 border-b px-4">
+        <SidebarInset className="m-2 ml-0 min-h-0 min-w-0 overflow-hidden rounded-xl shadow-sm">
+          <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-medium">{current.label}</div>
               <div className="truncate text-xs text-muted-foreground">{current.detail}</div>
             </div>
             {page === "sparks" ? (
               <div className="flex shrink-0 items-center gap-2">
-                <Button variant="outline" disabled={busy} onClick={() => void refreshList()}>
-                  刷新列表
-                </Button>
-                <Button variant="outline" disabled={busy} onClick={() => void testSend()}>
-                  测试发送
-                </Button>
-                <Button disabled={busy || renewBlocked} title={renewBlocked ? "限定名单开着，但一个都没勾" : "按顺序续今天待发的单聊"} onClick={() => void renew()}>
-                  一键续火
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger render={<Button variant="outline" disabled={busy} onClick={() => void refreshList()} />}>刷新列表</TooltipTrigger>
+                  <TooltipContent>重新读取会话列表，不发消息</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger render={<Button variant="outline" disabled={busy} onClick={() => void testSend()} />}>测试发送</TooltipTrigger>
+                  <TooltipContent>只发勾选的人，今天发过也会再发</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger render={<Button disabled={busy || renewBlocked} onClick={() => void renew()} />}>一键续火</TooltipTrigger>
+                  <TooltipContent>{renewBlocked ? "限定名单开着，但一个都没勾" : "按顺序续今天待发的单聊"}</TooltipContent>
+                </Tooltip>
               </div>
             ) : null}
             {page === "login" ? (
@@ -424,14 +436,6 @@ export default function App() {
               </div>
             ) : null}
           </header>
-          {notice ? (
-            <div className="shrink-0 px-4 pt-4">
-              <Alert variant={notice.stopped === "kick" ? "destructive" : "default"}>
-                <AlertTitle>{notice.stopped === "kick" ? "登录被弹掉了" : "结果"}</AlertTitle>
-                <AlertDescription>{notice.lines.map((line) => `${line.name || line.uid || "会话"} ${line.detail}`).join("；")}</AlertDescription>
-              </Alert>
-            </div>
-          ) : null}
           {page === "sparks" ? (
             <SparksPage
               rows={rows}
@@ -457,27 +461,27 @@ export default function App() {
               }}
             />
           ) : null}
-          {page === "login" ? <LoginPage /> : null}
           <ChatFrame visible={page === "login"} guestRef={guestRef} onReady={() => setReady(true)} onSettled={scheduleLoad} />
         </SidebarInset>
       </SidebarProvider>
-    </TooltipProvider>
+      </TooltipProvider>
+    </div>
   )
 }
 
-function accountStatus(profile: ProfileView | null, kicked: boolean, busy: boolean): { title: string; detail: string; signedIn: boolean } {
+function accountStatus(profile: ProfileView | null, kicked: boolean, busy: boolean): { title: string; signedIn: boolean } {
   if (kicked) {
-    return { title: "登录被弹掉", detail: "重新登录后再用", signedIn: false }
+    return { title: "登录被弹掉", signedIn: false }
   }
   if (profile?.signedIn) {
     const nickname = profile.nickname.trim()
     const named = nickname !== "" && nickname.toLowerCase() !== "none"
-    return { title: named ? nickname : "已登录", detail: "会话会自动读取", signedIn: true }
+    return { title: named ? nickname : "已登录", signedIn: true }
   }
   if (busy) {
-    return { title: "正在读取", detail: "等聊天页返回", signedIn: false }
+    return { title: "正在读取", signedIn: false }
   }
-  return { title: "未登录", detail: "先到登录页", signedIn: false }
+  return { title: "未登录", signedIn: false }
 }
 
 function pad(value: number): string {

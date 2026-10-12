@@ -1,5 +1,7 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
+import { Toaster } from "@/components/ui/sonner"
+import { ThemeProvider } from "./components/theme-provider"
 import App from "./App"
 import "./assets/index.css"
 
@@ -10,6 +12,9 @@ if (!root) {
 
 createRoot(root).render(
   <StrictMode>
-    <App />
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <App />
+      <Toaster position="top-center" offset={56} />
+    </ThemeProvider>
   </StrictMode>
 )

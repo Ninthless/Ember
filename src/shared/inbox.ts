@@ -30,6 +30,14 @@ export type InboxPage = {
   nextInitVersion: bigint | null
 }
 
+export function applySentToday<T extends { peerUid: string; iSentToday: boolean }>(rows: T[], sentUids: readonly string[]): T[] {
+  const sent = new Set(sentUids.filter((uid) => uid !== ""))
+  if (sent.size === 0) {
+    return rows
+  }
+  return rows.map((row) => (sent.has(row.peerUid) ? { ...row, iSentToday: true } : row))
+}
+
 export function parseInit(payload: Uint8Array, myUid: string, now: Date): InboxPage {
   if (!/^\d+$/.test(myUid)) {
     throw new InboxError("数字 uid 还没有")

@@ -1,5 +1,6 @@
 import type { WebviewTag } from "electron"
 import { useEffect, useRef, type MutableRefObject } from "react"
+import { installFrontierWatchScript } from "@shared/frontier-watch"
 import { isInAppUrl } from "@shared/navigation"
 import { CHAT_URL } from "./guest"
 
@@ -28,6 +29,7 @@ export function ChatFrame({ visible, guestRef, onReady, onSettled }: Props) {
         return false
       }
       const wake = () => {
+        void node.executeJavaScript(installFrontierWatchScript(), true).catch(() => undefined)
         readyRef.current()
         settledRef.current()
       }

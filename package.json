@@ -9,7 +9,7 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.web.json --pretty false",
-    "test": "tsx --test src/shared/pb.test.ts src/shared/decide.test.ts src/shared/select.test.ts src/shared/im.test.ts src/shared/flame.test.ts src/shared/inbox.test.ts src/shared/preview.test.ts src/shared/user-info.test.ts src/shared/emoji.test.ts src/shared/settings.test.ts src/shared/navigation.test.ts src/shared/browser-ua.test.ts"
+    "test": "tsx --test src/shared/pb.test.ts src/shared/decide.test.ts src/shared/select.test.ts src/shared/im.test.ts src/shared/flame.test.ts src/shared/inbox.test.ts src/shared/preview.test.ts src/shared/user-info.test.ts src/shared/emoji.test.ts src/shared/settings.test.ts src/shared/navigation.test.ts src/shared/browser-ua.test.ts src/shared/frontier-watch.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

@@ -1,7 +1,19 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { parseInit } from "./inbox"
+import { applySentToday, parseInit } from "./inbox"
 import { concat, encodeBytes, encodeInt, encodeKv, encodeString } from "./pb"
+
+test("sent peers are marked as sent today without touching the others", () => {
+  const rows = [
+    { peerUid: "222222", iSentToday: false },
+    { peerUid: "333333", iSentToday: false }
+  ]
+  const next = applySentToday(rows, ["222222", ""])
+  assert.equal(next[0].iSentToday, true)
+  assert.equal(next[1].iSentToday, false)
+  assert.equal(rows[0].iSentToday, false)
+  assert.equal(applySentToday(rows, []).length, 2)
+})
 
 test("init packet keeps the peer and skips a group without flame data", () => {
   const now = new Date("2026-10-11T12:00:00")

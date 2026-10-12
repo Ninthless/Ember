@@ -6,10 +6,12 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarSeparator } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import type { SparkRow } from "@shared/inbox"
+import { frontierCursorScript } from "@shared/frontier-watch"
+import { applySentToday, type SparkRow } from "@shared/inbox"
 import { dueBlocked } from "@shared/select"
 import { DEFAULT_SETTINGS, normalizeSettings, type Settings } from "@shared/settings"
 import { ChatFrame } from "./chat-frame"
+import { CHAT_URL } from "./guest"
 import { LoginPage } from "./pages/login-page"
 import { SchedulePage } from "./pages/schedule-page"
 import { SparksPage } from "./pages/sparks-page"
@@ -28,6 +30,8 @@ export default function App() {
   const guestRef = useRef<Guest | null>(null)
   const settingsRef = useRef<Settings>(DEFAULT_SETTINGS)
   const running = useRef(false)
+  const sending = useRef(false)
+  const listing = useRef(false)
   const loaded = useRef(false)
   const settleTimer = useRef(0)
   const [page, setPage] = useState<PageId>("sparks")
@@ -59,6 +63,46 @@ export default function App() {
     tick()
     const timer = window.setInterval(tick, 3000)
     return () => window.clearInterval(timer)
+  }, [ready])
+
+  useEffect(() => {
+    if (!ready) {
+      return
+    }
+    let cursor = -1
+    let refreshedAt = 0
+    const timer = window.setInterval(() => {
+      void followLive()
+    }, 4000)
+    return () => window.clearInterval(timer)
+
+    async function followLive() {
+      const guest = guestRef.current
+      if (!guest || !loaded.current || running.current || sending.current || listing.current) {
+        return
+      }
+      let seq = cursor
+      try {
+        seq = Number(await guest.executeJavaScript(frontierCursorScript(), true)) || 0
+      } catch {
+        seq = cursor
+      }
+      const moved = cursor >= 0 && seq !== cursor
+      cursor = seq
+      if (!moved && Date.now() - refreshedAt < 8000) {
+        return
+      }
+      if (running.current || sending.current || listing.current || !loaded.current) {
+        return
+      }
+      running.current = true
+      try {
+        await refreshQuiet(guest)
+        refreshedAt = Date.now()
+      } finally {
+        running.current = false
+      }
+    }
   }, [ready])
 
   useEffect(() => {
@@ -123,22 +167,74 @@ export default function App() {
     return { guest, profile: nextProfile, rows: source }
   }
 
+  async function reloadRows(guest: Guest, profile: ProfileView, sentUids: string[]) {
+    try {
+      const parsed = await readInbox(guest, profile)
+      let source = parsed
+      try {
+        source = await enrichInbox(guest, parsed)
+      } catch {
+        source = parsed
+      }
+      setRows(applySentToday(source, sentUids))
+    } catch {
+      setRows((currentRows) => applySentToday(currentRows, sentUids))
+    }
+  }
+
+  async function refreshQuiet(guest: Guest) {
+    try {
+      const nextProfile = await readProfile(guest)
+      setProfile(nextProfile)
+      if (!nextProfile.signedIn) {
+        loaded.current = false
+        return
+      }
+      const parsed = await readInbox(guest, nextProfile)
+      let source = parsed
+      try {
+        source = await enrichInbox(guest, parsed)
+      } catch {
+        source = parsed
+      }
+      setRows(source)
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : ""
+      if (detail.includes("decision=KICK") || detail.includes("登录弹掉") || detail.includes("没有可用登录态")) {
+        loaded.current = false
+        setKicked(detail.includes("KICK") || detail.includes("弹掉"))
+      }
+    }
+  }
+
   async function runSend(send: (prepared: Awaited<ReturnType<typeof prepare>>, picked: string[], limited: boolean) => Promise<RenewResult>): Promise<RenewResult> {
-    if (running.current) {
+    if (sending.current) {
       return { stopped: "none", lines: [] }
     }
-    running.current = true
+    sending.current = true
     setBusy(true)
     try {
-      const prepared = await prepare()
-      const current = settingsRef.current
-      const result = await send(prepared, current.picked, current.limited)
-      setNotice(result)
-      setKicked(result.stopped === "kick")
-      if (result.stopped === "kick") {
-        loaded.current = false
+      while (running.current) {
+        await wait(100)
       }
-      return result
+      running.current = true
+      try {
+        const prepared = await prepare()
+        const current = settingsRef.current
+        const result = await send(prepared, current.picked, current.limited)
+        setNotice(result)
+        setKicked(result.stopped === "kick")
+        const sentUids = result.lines.filter((line) => line.status === "sent").map((line) => line.uid)
+        if (result.stopped === "kick") {
+          loaded.current = false
+          setRows((currentRows) => applySentToday(currentRows, sentUids))
+        } else {
+          await reloadRows(prepared.guest, prepared.profile, sentUids)
+        }
+        return result
+      } finally {
+        running.current = false
+      }
     } catch (error) {
       const result: RenewResult = {
         stopped: "login",
@@ -147,7 +243,7 @@ export default function App() {
       setNotice(result)
       return result
     } finally {
-      running.current = false
+      sending.current = false
       setBusy(false)
     }
   }
@@ -156,15 +252,81 @@ export default function App() {
     return runSend((prepared, picked, limited) => renewDue(prepared.guest, prepared.profile, prepared.rows, limited, picked))
   }
 
+  function reloadChat() {
+    const guest = guestRef.current
+    if (!guest || sending.current) {
+      return
+    }
+    loaded.current = false
+    try {
+      guest.reload()
+    } catch {
+      void guest.loadURL(CHAT_URL)
+    }
+  }
+
   function testSend(): Promise<RenewResult> {
     return runSend((prepared, picked) => sendChecked(prepared.guest, prepared.profile, prepared.rows, picked))
+  }
+
+  async function refreshList() {
+    if (sending.current || listing.current) {
+      return
+    }
+    listing.current = true
+    setBusy(true)
+    try {
+      while (running.current) {
+        await wait(100)
+      }
+      running.current = true
+      try {
+        const guest = requireGuest()
+        const nextProfile = await readProfile(guest)
+        setProfile(nextProfile)
+        if (!nextProfile.signedIn) {
+          loaded.current = false
+          setNotice({
+            stopped: "login",
+            lines: [{ uid: "", name: "", status: "failed", detail: nextProfile.detail }]
+          })
+          return
+        }
+        setKicked(false)
+        const parsed = await readInbox(guest, nextProfile)
+        let source = parsed
+        try {
+          source = await enrichInbox(guest, parsed)
+        } catch {
+          source = parsed
+        }
+        setRows(source)
+        loaded.current = true
+      } finally {
+        running.current = false
+      }
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "读取失败"
+      const kickedNow = detail.includes("decision=KICK") || detail.includes("登录弹掉")
+      if (kickedNow || detail.includes("没有可用登录态")) {
+        loaded.current = false
+        setKicked(kickedNow)
+      }
+      setNotice({
+        stopped: kickedNow ? "kick" : "login",
+        lines: [{ uid: "", name: "", status: "failed", detail }]
+      })
+    } finally {
+      listing.current = false
+      setBusy(false)
+    }
   }
 
   async function runSlot() {
     const current = settingsRef.current
     const now = new Date()
     const clock = `${pad(now.getHours())}:${pad(now.getMinutes())}`
-    if (!current.autoSend || !current.runAt.includes(clock) || running.current) {
+    if (!current.autoSend || !current.runAt.includes(clock) || running.current || sending.current) {
       return
     }
     const slot = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}|${clock}`
@@ -242,6 +404,9 @@ export default function App() {
             </div>
             {page === "sparks" ? (
               <div className="flex shrink-0 items-center gap-2">
+                <Button variant="outline" disabled={busy} onClick={() => void refreshList()}>
+                  刷新列表
+                </Button>
                 <Button variant="outline" disabled={busy} onClick={() => void testSend()}>
                   测试发送
                 </Button>
@@ -250,7 +415,14 @@ export default function App() {
                 </Button>
               </div>
             ) : null}
-            {page === "login" ? <Badge variant={status.signedIn ? "default" : "secondary"}>{status.title}</Badge> : null}
+            {page === "login" ? (
+              <div className="flex shrink-0 items-center gap-2">
+                <Button variant="outline" disabled={busy} onClick={reloadChat}>
+                  刷新页面
+                </Button>
+                <Badge variant={status.signedIn ? "default" : "secondary"}>{status.title}</Badge>
+              </div>
+            ) : null}
           </header>
           {notice ? (
             <div className="shrink-0 px-4 pt-4">
@@ -310,4 +482,10 @@ function accountStatus(profile: ProfileView | null, kicked: boolean, busy: boole
 
 function pad(value: number): string {
   return String(value).padStart(2, "0")
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms)
+  })
 }

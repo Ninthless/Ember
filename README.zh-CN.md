@@ -38,6 +38,12 @@ Ember 是一个 Windows 桌面软件，用来给抖音单聊续火花。登录�
 
 选项写在 Electron userData 目录里的 `settings.json`。在 Windows 上是 `%APPDATA%\spark-desktop\settings.json`。里面有定时、排除的 id，以及测试发送勾选的 id。群聊记的是会话 id。没有聊天登录信息。以前的发送范围开关不再读取。
 
+## 发布
+
+第一个发布版本是 `0.1.0`。推送的标签名是 `v` 加上 `package.json` 里的 `version`，例如 `v0.1.0`。GitHub Actions 会跑测试，打出 Windows 安装包和便携版，并挂到对应的 GitHub Release 上。
+
+这条工作流没有给文件签名。Windows SmartScreen 第一次打开时可能会提示。
+
 ## 开发
 
 需要 Node.js 和 npm。这个仓库在 Windows 上开发。
@@ -54,6 +60,7 @@ npm run dev
 | `npm test` | 跑本地单元测试。测试不会请求抖音。 |
 | `npm run typecheck` | 检查渲染层和共享代码的类型。 |
 | `npm run build` | 产物写到 `out/`。 |
+| `npm run dist:win` | 先构建 `out/`，再把 Windows 安装包和便携版写到 `release/`。 |
 | `npm run preview` | 打开构建好的软件。 |
 
 构建产物、依赖和本地环境文件不进 git。见 `.gitignore`。
@@ -66,5 +73,7 @@ npm run dev
 | `src/preload` | 窗口读写设置用的那一层 |
 | `src/renderer` | 侧栏、火花、定时、登录、嵌入的聊天页 |
 | `src/shared` | 列表解析、发送判断和测试 |
+| `electron-builder.yml` | Windows 安装包和便携版 |
+| `.github/workflows` | 持续集成，以及推送版本标签时的发布 |
 
 npm 包名仍是 `spark-desktop`。产品名是 Ember。

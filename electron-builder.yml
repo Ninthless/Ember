@@ -1,0 +1,34 @@
+appId: com.ninthless.ember
+productName: Ember
+npmRebuild: false
+directories:
+  output: release
+  buildResources: resources
+files:
+  - out/**/*
+  - package.json
+  - "!**/*.map"
+asar: true
+win:
+  executableName: Ember
+  icon: resources/icon.ico
+  signAndEditExecutable: true
+  signExecutable: false
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  artifactName: Ember-Setup-${version}.${ext}
+  shortcutName: Ember
+  uninstallDisplayName: Ember
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+portable:
+  artifactName: Ember-${version}-portable.${ext}

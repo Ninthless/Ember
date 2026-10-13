@@ -38,6 +38,12 @@ The list updates after a send, when the chat page reports new traffic, and on a 
 
 Choices are stored in `settings.json` inside Electron's userData directory. On Windows that is `%APPDATA%\spark-desktop\settings.json`. The file holds the schedule, the excluded ids, and the test-send ids. Group rows are stored by conversation id. It does not hold the chat login. An older send-scope switch in that file is ignored.
 
+## Release
+
+The first published version is `0.1.0`. Push a tag whose name is `v` plus the `version` in `package.json`, for example `v0.1.0`. GitHub Actions runs the tests, builds a Windows installer and a portable executable, and attaches both to that GitHub release.
+
+The workflow does not sign the files. Windows SmartScreen can warn the first time you open them.
+
 ## Develop
 
 Requirements: Node.js and npm. This repo is developed on Windows.
@@ -54,6 +60,7 @@ npm run dev
 | `npm test` | Runs the local unit tests. They do not call Douyin. |
 | `npm run typecheck` | Typechecks the renderer and shared code. |
 | `npm run build` | Writes `out/`. |
+| `npm run dist:win` | Builds `out/`, then writes the Windows installer and portable executable to `release/`. |
 | `npm run preview` | Opens the built app. |
 
 Built output, dependencies, and local env files stay out of git. See `.gitignore`.
@@ -66,5 +73,7 @@ Built output, dependencies, and local env files stay out of git. See `.gitignore
 | `src/preload` | The small bridge the window uses for settings |
 | `src/renderer` | Sidebar, sparks, schedule, login, embedded chat page |
 | `src/shared` | List parsing, send decisions, and tests |
+| `electron-builder.yml` | Windows installer and portable package |
+| `.github/workflows` | CI, and the release that runs when a version tag is pushed |
 
 The npm package name is still `spark-desktop`. The product name is Ember.

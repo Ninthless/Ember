@@ -13,7 +13,7 @@ const CHROME_UA = chromeUserAgent(CHROME_VERSION)
 const CHROME_HINT = chromeClientHint(CHROME_VERSION)
 
 app.userAgentFallback = CHROME_UA
-app.setAppUserModelId("Ember")
+app.setAppUserModelId("com.ninthless.ember")
 
 function windowIcon(): string | undefined {
   const ico = join(app.getAppPath(), "resources", "icon.ico")

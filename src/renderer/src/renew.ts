@@ -3,7 +3,7 @@ import { explainInitResponse, explainSendResponse, ImError, buildCookieEnvelope,
 import { parseInit, type SparkRow } from "@shared/inbox"
 import { fromBase64, toBase64 } from "@shared/pb"
 import { sendDecision, testBlock } from "@shared/decide"
-import { dueBlocked, filterPicked, planChecked, selectId } from "@shared/select"
+import { omitExcluded, planChecked, selectId } from "@shared/select"
 import { applyPeerCards, applyPeerSecs, cardsFromGuest, directoryFromGuest, readChatDirectoryScript, readUserInfoScript, shownName, USER_INFO_BATCH } from "@shared/user-info"
 import { postProtobufScript, readEmojiScript, readProfileScript } from "./guest"
 
@@ -123,17 +123,13 @@ export async function enrichInbox(guest: Guest, rows: SparkRow[]): Promise<Spark
   return named
 }
 
-export async function renewDue(guest: Guest, profile: ProfileView, rows: SparkRow[], limited: boolean, picked: string[]): Promise<RenewResult> {
+export async function renewDue(guest: Guest, profile: ProfileView, rows: SparkRow[], excluded: string[]): Promise<RenewResult> {
   if (!profile.signedIn) {
     return { stopped: "login", lines: [{ uid: "", name: "", status: "failed", detail: profile.detail }] }
   }
-  if (dueBlocked(limited, picked)) {
-    return { stopped: "none", lines: [{ uid: "", name: "", status: "skipped", detail: "限定名单是空的，先勾选要续的会话" }] }
-  }
-  const due = filterPicked(
+  const due = omitExcluded(
     rows.filter((row) => sendDecision(row)[0] === "due"),
-    limited,
-    picked
+    excluded
   )
   if (!due.length) {
     return { stopped: "none", lines: [{ uid: "", name: "", status: "skipped", detail: "今天没有要发的会话" }] }
@@ -141,14 +137,14 @@ export async function renewDue(guest: Guest, profile: ProfileView, rows: SparkRo
   return deliverRows(guest, profile, due)
 }
 
-export async function sendChecked(guest: Guest, profile: ProfileView, rows: SparkRow[], picked: string[]): Promise<RenewResult> {
+export async function sendChecked(guest: Guest, profile: ProfileView, rows: SparkRow[], picked: string[], excluded: string[]): Promise<RenewResult> {
   if (!profile.signedIn) {
     return { stopped: "login", lines: [{ uid: "", name: "", status: "failed", detail: profile.detail }] }
   }
   if (picked.length === 0) {
     return { stopped: "none", lines: [{ uid: "", name: "", status: "skipped", detail: "先勾选要测试的会话" }] }
   }
-  const plan = planChecked(rows, picked, testBlock)
+  const plan = planChecked(rows, picked, testBlock, excluded)
   if (!plan.ready.length) {
     return {
       stopped: "none",

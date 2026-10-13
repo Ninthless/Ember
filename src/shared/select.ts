@@ -23,6 +23,11 @@ export function dueBlocked(limited: boolean, picked: string[]): boolean {
   return limited && picked.length === 0
 }
 
+export function omitExcluded<T extends Pickable>(rows: T[], excluded: string[]): T[] {
+  const blocked = new Set(excluded)
+  return rows.filter((row) => !blocked.has(selectId(row)))
+}
+
 export type CheckedSkip = {
   uid: string
   name: string
@@ -37,9 +42,11 @@ export type CheckedPlan<T> = {
 export function planChecked<T extends Pickable & { name: string }>(
   rows: T[],
   picked: string[],
-  block: (row: T) => string | null
+  block: (row: T) => string | null,
+  excluded: string[] = []
 ): CheckedPlan<T> {
   const wanted = new Set(picked.filter(Boolean))
+  const held = new Set(excluded)
   const ready: T[] = []
   const skipped: CheckedSkip[] = []
   const seen = new Set<string>()
@@ -49,6 +56,10 @@ export function planChecked<T extends Pickable & { name: string }>(
       continue
     }
     seen.add(id)
+    if (held.has(id)) {
+      skipped.push({ uid: id, name: row.name, detail: "已排除" })
+      continue
+    }
     const detail = block(row)
     if (detail) {
       skipped.push({ uid: id, name: row.name, detail })

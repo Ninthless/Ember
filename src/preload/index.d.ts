@@ -1,8 +1,8 @@
 type Settings = {
   autoSend: boolean
   runAt: [string, string]
-  limited: boolean
   picked: string[]
+  excluded: string[]
   lastSlot: string
 }
 

@@ -8,14 +8,14 @@ Ember is a Windows desktop app that keeps Douyin private-chat sparks going. You 
 
 - Sign in on the chat page. The session stays in this app after a normal quit. You do not paste a cookie.
 - See each private chat and group: name, spark, days, last message, whether you sent today, and whether the other person sent today.
-- Renew due private chats and groups one at a time, or send only the chats you checked.
+- Renew due private chats and groups one at a time. Excluded chats stay out. Test send uses only the test column.
 - Run two clock times while the window stays open. Automatic send is off until you turn it on.
 
 A spark for the day still needs a message from both people. Ember only sends your side.
 
 ## Pages
 
-**Sparks.** Three counts sit on top: due today, lit sparks, and checked people. The table scrolls inside the window. **Refresh list** reads the conversation list again and does not send.
+**Sparks.** Three counts sit on top: due today, lit sparks, and excluded chats. The table scrolls inside the window. **Refresh list** reads the conversation list again and does not send.
 
 **Schedule.** Two times, `10:05` and `21:05` until you change them. **到点自动续火** stays off by default. The window has to be open at that minute; a closed app does not send.
 
@@ -25,11 +25,10 @@ A spark for the day still needs a message from both people. Ember only sends you
 
 | Action | Who is included |
 | --- | --- |
-| 一键续火 | Private chats and groups that are due today. A chat you already sent today is skipped. |
-| 测试发送 | Only checked private chats and groups. A message already sent today does not skip them. |
-| 限定名单 off | Due send uses every due private chat and group. |
-| 限定名单 on, nobody checked | Due send stays disabled. |
-| 限定名单 on, some checked | Due send uses only those chats. Group rows are stored by conversation id. |
+| 一键续火 | Private chats and groups that are due today, except excluded ones. A chat you already sent today is skipped. |
+| 到点自动续火 | The same chats as 一键续火, at the two clock times. |
+| 测试发送 | Only rows checked in the test column. An excluded row is not sent. A message already sent today does not skip the rest. |
+| 排除 | Checked rows stay out of 一键续火, the schedule, and 测试发送. Nobody excluded means every due chat is included. |
 
 A chat with no conversation short id, or no ticket, is never sent. Other conversation types are never sent. Messages go out one after another, with a short pause after each response. If the chat page drops the login, that round stops.
 
@@ -37,7 +36,7 @@ The list updates after a send, when the chat page reports new traffic, and on a 
 
 ## Settings
 
-Choices are stored in `settings.json` inside Electron's userData directory. On Windows that is `%APPDATA%\spark-desktop\settings.json`. The file holds the schedule, the limited-list switch, and the checked ids. Group rows are stored by conversation id. It does not hold the chat login.
+Choices are stored in `settings.json` inside Electron's userData directory. On Windows that is `%APPDATA%\spark-desktop\settings.json`. The file holds the schedule, the excluded ids, and the test-send ids. Group rows are stored by conversation id. It does not hold the chat login. An older send-scope switch in that file is ignored.
 
 ## Develop
 

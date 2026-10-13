@@ -8,7 +8,7 @@ export async function readSettings(): Promise<Settings> {
     const raw = await readFile(settingsPath(), "utf8")
     return normalizeSettings(JSON.parse(raw))
   } catch {
-    return { ...DEFAULT_SETTINGS, runAt: [...DEFAULT_SETTINGS.runAt], picked: [] }
+    return { ...DEFAULT_SETTINGS, runAt: [...DEFAULT_SETTINGS.runAt], picked: [], excluded: [] }
   }
 }
 

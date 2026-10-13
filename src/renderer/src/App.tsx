@@ -8,7 +8,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "sonner"
 import { frontierCursorScript } from "@shared/frontier-watch"
 import { applySentToday, type SparkRow } from "@shared/inbox"
-import { dueBlocked } from "@shared/select"
 import { DEFAULT_SETTINGS, normalizeSettings, type Settings } from "@shared/settings"
 import { ChatFrame } from "./chat-frame"
 import { TitleBar } from "./title-bar"
@@ -21,7 +20,7 @@ type PageId = "sparks" | "schedule" | "login"
 type Guest = WebviewTag
 
 const pages: Array<{ id: PageId; label: string; detail: string; icon: typeof FlameIcon }> = [
-  { id: "sparks", label: "火花", detail: "单聊和群聊按顺序续。没短号或没票据的不发。", icon: FlameIcon },
+  { id: "sparks", label: "火花", detail: "单聊和群聊按顺序续。排除了的、没短号或没票据的不发。", icon: FlameIcon },
   { id: "schedule", label: "定时", detail: "窗口开着才会到点续。默认不自动发。", icon: Clock3Icon },
   { id: "login", label: "登录", detail: "在下面的聊天页登录。登完会自己读取。", icon: LogInIcon }
 ]
@@ -218,7 +217,7 @@ export default function App() {
     }
   }
 
-  async function runSend(send: (prepared: Awaited<ReturnType<typeof prepare>>, picked: string[], limited: boolean) => Promise<RenewResult>): Promise<RenewResult> {
+  async function runSend(send: (prepared: Awaited<ReturnType<typeof prepare>>, picked: string[], excluded: string[]) => Promise<RenewResult>): Promise<RenewResult> {
     if (sending.current) {
       return { stopped: "none", lines: [] }
     }
@@ -232,7 +231,7 @@ export default function App() {
       try {
         const prepared = await prepare()
         const current = settingsRef.current
-        const result = await send(prepared, current.picked, current.limited)
+        const result = await send(prepared, current.picked, current.excluded)
         setNotice(result)
         setKicked(result.stopped === "kick")
         const sentUids = result.lines.filter((line) => line.status === "sent").map((line) => line.uid)
@@ -260,7 +259,7 @@ export default function App() {
   }
 
   function renew(): Promise<RenewResult> {
-    return runSend((prepared, picked, limited) => renewDue(prepared.guest, prepared.profile, prepared.rows, limited, picked))
+    return runSend((prepared, _picked, excluded) => renewDue(prepared.guest, prepared.profile, prepared.rows, excluded))
   }
 
   function reloadChat() {
@@ -277,7 +276,7 @@ export default function App() {
   }
 
   function testSend(): Promise<RenewResult> {
-    return runSend((prepared, picked) => sendChecked(prepared.guest, prepared.profile, prepared.rows, picked))
+    return runSend((prepared, picked, excluded) => sendChecked(prepared.guest, prepared.profile, prepared.rows, picked, excluded))
   }
 
   async function refreshList() {
@@ -365,8 +364,6 @@ export default function App() {
 
   const current = pages.find((item) => item.id === page) ?? pages[0]
   const status = accountStatus(profile, kicked, busy)
-  const renewBlocked = dueBlocked(settings.limited, settings.picked)
-
   return (
     <div className="flex h-svh flex-col overflow-hidden bg-sidebar">
       <TitleBar />
@@ -419,11 +416,11 @@ export default function App() {
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger render={<Button variant="outline" disabled={busy} onClick={() => void testSend()} />}>测试发送</TooltipTrigger>
-                  <TooltipContent>只发勾选的单聊和群聊，今天发过也会再发</TooltipContent>
+                  <TooltipContent>只发测试列勾上的会话。排除了的不发。今天发过也会再发</TooltipContent>
                 </Tooltip>
                 <Tooltip>
-                  <TooltipTrigger render={<Button disabled={busy || renewBlocked} onClick={() => void renew()} />}>一键续火</TooltipTrigger>
-                  <TooltipContent>{renewBlocked ? "限定名单开着，但一个会话都没勾" : "按顺序续今天待发的单聊和群聊"}</TooltipContent>
+                  <TooltipTrigger render={<Button disabled={busy} onClick={() => void renew()} />}>一键续火</TooltipTrigger>
+                  <TooltipContent>按顺序续今天待发的单聊和群聊。排除了的不发</TooltipContent>
                 </Tooltip>
               </div>
             ) : null}
@@ -439,11 +436,14 @@ export default function App() {
           {page === "sparks" ? (
             <SparksPage
               rows={rows}
-              limited={settings.limited}
+              excluded={settings.excluded}
               picked={settings.picked}
               busy={busy}
-              onLimited={(limited) => void save({ ...settings, limited })}
-              onToggle={(uid, checked) => {
+              onExclude={(uid, checked) => {
+                const excluded = checked ? [...settings.excluded, uid] : settings.excluded.filter((item) => item !== uid)
+                void save({ ...settings, excluded })
+              }}
+              onTest={(uid, checked) => {
                 const picked = checked ? [...settings.picked, uid] : settings.picked.filter((item) => item !== uid)
                 void save({ ...settings, picked })
               }}

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 import { testBlock } from "./decide"
-import { dueBlocked, filterPicked, planChecked } from "./select"
+import { dueBlocked, filterPicked, omitExcluded, planChecked } from "./select"
 
 const rows = [{ peerUid: "1" }, { peerUid: "2" }]
 
@@ -35,4 +35,18 @@ test("test send uses only checked chats and still sends a group after today", ()
   )
   assert.deepEqual(plan.skipped.map((item) => item.detail), ["没有会话短号", "这个会话不能发", "当前会话里没有这个人"])
   assert.deepEqual(planChecked(people, [], testBlock), { ready: [], skipped: [] })
+})
+
+test("excluded chats leave the due set and are not test-sent", () => {
+  assert.deepEqual(
+    omitExcluded(rows, ["1"]).map((row) => row.peerUid),
+    ["2"]
+  )
+  assert.equal(omitExcluded(rows, []).length, 2)
+  const plan = planChecked(people, ["1", "7524551011583771176", "4"], testBlock, ["7524551011583771176", "4"])
+  assert.deepEqual(
+    plan.ready.map((row) => row.peerUid || row.conversationId),
+    ["1"]
+  )
+  assert.deepEqual(plan.skipped.map((item) => item.detail), ["已排除", "已排除"])
 })

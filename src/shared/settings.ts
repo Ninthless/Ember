@@ -1,16 +1,16 @@
 export type Settings = {
   autoSend: boolean
   runAt: [string, string]
-  limited: boolean
   picked: string[]
+  excluded: string[]
   lastSlot: string
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   autoSend: false,
   runAt: ["10:05", "21:05"],
-  limited: false,
   picked: [],
+  excluded: [],
   lastSlot: ""
 }
 
@@ -19,8 +19,8 @@ export function normalizeSettings(input: unknown): Settings {
   return {
     autoSend: raw.autoSend === true,
     runAt: normalizeTimes(raw.runAt),
-    limited: raw.limited === true,
     picked: uniqueDigits(raw.picked),
+    excluded: uniqueDigits(raw.excluded),
     lastSlot: typeof raw.lastSlot === "string" ? raw.lastSlot.slice(0, 32) : ""
   }
 }

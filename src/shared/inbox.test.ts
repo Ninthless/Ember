@@ -79,4 +79,7 @@ test("init keeps the peer sec uid, last preview, and group avatar", () => {
   assert.equal(group.rows[0].name, "哈基咪")
   assert.equal(group.rows[0].avatarUrl, "https://example.invalid/group.jpg")
   assert.equal(group.rows[0].secUid, "")
+  assert.equal(group.rows[0].isGroup, true)
+  assert.equal(group.rows[0].sendTarget, true)
+  assert.equal(group.rows[0].conversationType, 2)
 })

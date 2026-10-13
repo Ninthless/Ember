@@ -1,5 +1,14 @@
 export type Pickable = {
   peerUid: string
+  isGroup?: boolean
+  conversationId?: string
+}
+
+export function selectId(row: Pickable): string {
+  if (row.isGroup && row.conversationId) {
+    return row.conversationId
+  }
+  return row.peerUid
 }
 
 export function filterPicked<T extends Pickable>(rows: T[], limited: boolean, picked: string[]): T[] {
@@ -7,7 +16,7 @@ export function filterPicked<T extends Pickable>(rows: T[], limited: boolean, pi
     return rows
   }
   const wanted = new Set(picked)
-  return rows.filter((row) => wanted.has(row.peerUid))
+  return rows.filter((row) => wanted.has(selectId(row)))
 }
 
 export function dueBlocked(limited: boolean, picked: string[]): boolean {
@@ -35,13 +44,14 @@ export function planChecked<T extends Pickable & { name: string }>(
   const skipped: CheckedSkip[] = []
   const seen = new Set<string>()
   for (const row of rows) {
-    if (!wanted.has(row.peerUid)) {
+    const id = selectId(row)
+    if (!wanted.has(id)) {
       continue
     }
-    seen.add(row.peerUid)
+    seen.add(id)
     const detail = block(row)
     if (detail) {
-      skipped.push({ uid: row.peerUid, name: row.name, detail })
+      skipped.push({ uid: id, name: row.name, detail })
       continue
     }
     ready.push(row)

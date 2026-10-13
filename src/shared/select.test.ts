@@ -22,13 +22,17 @@ test("a saved list keeps only those uids", () => {
 const people = [
   { peerUid: "1", name: "甲", isGroup: false, sendTarget: true, conversationShortId: 9n, iSentToday: true },
   { peerUid: "2", name: "乙", isGroup: false, sendTarget: true, conversationShortId: 9n, iSentToday: false },
-  { peerUid: "3", name: "群", isGroup: true, sendTarget: false, conversationShortId: 9n, iSentToday: false },
-  { peerUid: "4", name: "短", isGroup: false, sendTarget: true, conversationShortId: 0n, iSentToday: false }
+  { peerUid: "", conversationId: "7524551011583771176", name: "群", isGroup: true, sendTarget: true, conversationShortId: 9n, iSentToday: false, ticket: "ticket-1" },
+  { peerUid: "4", name: "短", isGroup: false, sendTarget: true, conversationShortId: 0n, iSentToday: false },
+  { peerUid: "5", name: "挡", isGroup: false, sendTarget: false, conversationShortId: 9n, iSentToday: false }
 ]
 
-test("test send uses only checked people and still sends after today", () => {
-  const plan = planChecked(people, ["1", "3", "4", "9"], testBlock)
-  assert.deepEqual(plan.ready.map((row) => row.peerUid), ["1"])
-  assert.deepEqual(plan.skipped.map((item) => item.detail), ["群聊不发", "没有会话短号", "当前会话里没有这个人"])
+test("test send uses only checked chats and still sends a group after today", () => {
+  const plan = planChecked(people, ["1", "7524551011583771176", "4", "5", "9"], testBlock)
+  assert.deepEqual(
+    plan.ready.map((row) => row.peerUid || row.conversationId),
+    ["1", "7524551011583771176"]
+  )
+  assert.deepEqual(plan.skipped.map((item) => item.detail), ["没有会话短号", "这个会话不能发", "当前会话里没有这个人"])
   assert.deepEqual(planChecked(people, [], testBlock), { ready: [], skipped: [] })
 })

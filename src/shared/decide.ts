@@ -3,14 +3,18 @@ export type DecisionRow = {
   sendTarget: boolean
   conversationShortId: bigint
   iSentToday: boolean
+  ticket?: string
 }
 
 export function sendDecision(row: DecisionRow): [string, string] {
-  if (row.isGroup || !row.sendTarget) {
-    return ["group", "群聊不发"]
+  if (!row.sendTarget) {
+    return ["blocked", "这个会话不能发"]
   }
   if (row.conversationShortId <= 0n) {
     return ["short", "没有会话短号"]
+  }
+  if (row.ticket !== undefined && row.ticket.trim() === "") {
+    return ["ticket", "没有票据"]
   }
   if (row.iSentToday) {
     return ["sent", "今天已发，定时跳过"]

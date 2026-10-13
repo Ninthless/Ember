@@ -7,6 +7,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/
 import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { sendDecision } from "@shared/decide"
+import { selectId } from "@shared/select"
 import { flameLabel } from "@shared/flame"
 import type { SparkRow } from "@shared/inbox"
 import { formatChatTime } from "@shared/preview"
@@ -33,7 +34,7 @@ export function SparksPage({ rows, limited, picked, busy, onLimited, onToggle }:
       <Card size="sm" className="shrink-0">
         <CardHeader>
           <CardTitle>限定名单</CardTitle>
-          <CardDescription>{limited ? "只续勾选的人。一个都不勾，就不会发。" : "关闭时，今天待发的单聊都会按顺序续。"}</CardDescription>
+          <CardDescription>{limited ? "只续勾选的单聊和群聊。一个都不勾，就不会发。" : "关闭时，今天待发的单聊和群聊都会按顺序续。"}</CardDescription>
           <CardAction>
             <Switch checked={limited} onCheckedChange={onLimited} />
           </CardAction>
@@ -68,6 +69,7 @@ export function SparksPage({ rows, limited, picked, busy, onLimited, onToggle }:
               </TableHeader>
               <TableBody>
                 {rows.map((row) => {
+                  const id = selectId(row)
                   const [kind, label] = sendDecision(row)
                   const titled = row.name && !/^\d+$/.test(row.name)
                   const title = titled ? row.name : "未命名"
@@ -75,9 +77,10 @@ export function SparksPage({ rows, limited, picked, busy, onLimited, onToggle }:
                     <TableRow key={row.conversationId}>
                       <TableCell>
                         <Checkbox
-                          disabled={!row.sendTarget}
-                          checked={picked.includes(row.peerUid)}
-                          onCheckedChange={(checked) => onToggle(row.peerUid, checked === true)}
+                          disabled={!row.sendTarget || !id}
+                          checked={picked.includes(id)}
+                          onCheckedChange={(checked) => onToggle(id, checked === true)}
+                          aria-label={row.isGroup ? `勾选群聊 ${title}` : `勾选 ${title}`}
                         />
                       </TableCell>
                       <TableCell>

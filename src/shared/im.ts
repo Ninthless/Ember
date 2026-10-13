@@ -69,8 +69,8 @@ export function buildSessionSend(
   if (!ticket) {
     throw new ImError("会话页没有 ticket")
   }
-  if (conversationType !== 1) {
-    throw new ImError("只给好友单聊发")
+  if (conversationType !== 1 && conversationType !== 2) {
+    throw new ImError("这个会话类型不能发")
   }
   return buildCookieEnvelope(
     userAgent,

@@ -21,7 +21,7 @@ type PageId = "sparks" | "schedule" | "login"
 type Guest = WebviewTag
 
 const pages: Array<{ id: PageId; label: string; detail: string; icon: typeof FlameIcon }> = [
-  { id: "sparks", label: "火花", detail: "单聊按顺序续。群聊不发。", icon: FlameIcon },
+  { id: "sparks", label: "火花", detail: "单聊和群聊按顺序续。没短号或没票据的不发。", icon: FlameIcon },
   { id: "schedule", label: "定时", detail: "窗口开着才会到点续。默认不自动发。", icon: Clock3Icon },
   { id: "login", label: "登录", detail: "在下面的聊天页登录。登完会自己读取。", icon: LogInIcon }
 ]
@@ -419,11 +419,11 @@ export default function App() {
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger render={<Button variant="outline" disabled={busy} onClick={() => void testSend()} />}>测试发送</TooltipTrigger>
-                  <TooltipContent>只发勾选的人，今天发过也会再发</TooltipContent>
+                  <TooltipContent>只发勾选的单聊和群聊，今天发过也会再发</TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger render={<Button disabled={busy || renewBlocked} onClick={() => void renew()} />}>一键续火</TooltipTrigger>
-                  <TooltipContent>{renewBlocked ? "限定名单开着，但一个都没勾" : "按顺序续今天待发的单聊"}</TooltipContent>
+                  <TooltipContent>{renewBlocked ? "限定名单开着，但一个会话都没勾" : "按顺序续今天待发的单聊和群聊"}</TooltipContent>
                 </Tooltip>
               </div>
             ) : null}

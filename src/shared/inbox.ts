@@ -30,12 +30,15 @@ export type InboxPage = {
   nextInitVersion: bigint | null
 }
 
-export function applySentToday<T extends { peerUid: string; iSentToday: boolean }>(rows: T[], sentUids: readonly string[]): T[] {
-  const sent = new Set(sentUids.filter((uid) => uid !== ""))
+export function applySentToday<T extends { peerUid: string; conversationId?: string; iSentToday: boolean }>(
+  rows: T[],
+  sentIds: readonly string[]
+): T[] {
+  const sent = new Set(sentIds.filter((id) => id !== ""))
   if (sent.size === 0) {
     return rows
   }
-  return rows.map((row) => (sent.has(row.peerUid) ? { ...row, iSentToday: true } : row))
+  return rows.map((row) => (sent.has(row.peerUid) || (row.conversationId !== undefined && sent.has(row.conversationId)) ? { ...row, iSentToday: true } : row))
 }
 
 export function parseInit(payload: Uint8Array, myUid: string, now: Date): InboxPage {
@@ -122,7 +125,7 @@ function conversation(blob: Uint8Array, myUid: string, now: Date, nowTs: number)
     name: displayName(info, core, peerUid),
     peerUid,
     isGroup,
-    sendTarget: conversationType === 1 && Boolean(peerUid),
+    sendTarget: (conversationType === 1 && Boolean(peerUid)) || (conversationType === 2 && Boolean(conversationId)),
     flame: classifyFlame(payload, nowTs),
     iSentToday: mine,
     otherSentToday: other,

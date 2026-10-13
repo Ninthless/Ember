@@ -3,7 +3,7 @@ import { explainInitResponse, explainSendResponse, ImError, buildCookieEnvelope,
 import { parseInit, type SparkRow } from "@shared/inbox"
 import { fromBase64, toBase64 } from "@shared/pb"
 import { sendDecision, testBlock } from "@shared/decide"
-import { dueBlocked, filterPicked, planChecked } from "@shared/select"
+import { dueBlocked, filterPicked, planChecked, selectId } from "@shared/select"
 import { applyPeerCards, applyPeerSecs, cardsFromGuest, directoryFromGuest, readChatDirectoryScript, readUserInfoScript, shownName, USER_INFO_BATCH } from "@shared/user-info"
 import { postProtobufScript, readEmojiScript, readProfileScript } from "./guest"
 
@@ -128,7 +128,7 @@ export async function renewDue(guest: Guest, profile: ProfileView, rows: SparkRo
     return { stopped: "login", lines: [{ uid: "", name: "", status: "failed", detail: profile.detail }] }
   }
   if (dueBlocked(limited, picked)) {
-    return { stopped: "none", lines: [{ uid: "", name: "", status: "skipped", detail: "限定名单是空的，先勾选要续的人" }] }
+    return { stopped: "none", lines: [{ uid: "", name: "", status: "skipped", detail: "限定名单是空的，先勾选要续的会话" }] }
   }
   const due = filterPicked(
     rows.filter((row) => sendDecision(row)[0] === "due"),
@@ -136,7 +136,7 @@ export async function renewDue(guest: Guest, profile: ProfileView, rows: SparkRo
     picked
   )
   if (!due.length) {
-    return { stopped: "none", lines: [{ uid: "", name: "", status: "skipped", detail: "今天没有要发的人" }] }
+    return { stopped: "none", lines: [{ uid: "", name: "", status: "skipped", detail: "今天没有要发的会话" }] }
   }
   return deliverRows(guest, profile, due)
 }
@@ -146,7 +146,7 @@ export async function sendChecked(guest: Guest, profile: ProfileView, rows: Spar
     return { stopped: "login", lines: [{ uid: "", name: "", status: "failed", detail: profile.detail }] }
   }
   if (picked.length === 0) {
-    return { stopped: "none", lines: [{ uid: "", name: "", status: "skipped", detail: "先勾选要测试的人" }] }
+    return { stopped: "none", lines: [{ uid: "", name: "", status: "skipped", detail: "先勾选要测试的会话" }] }
   }
   const plan = planChecked(rows, picked, testBlock)
   if (!plan.ready.length) {
@@ -154,7 +154,7 @@ export async function sendChecked(guest: Guest, profile: ProfileView, rows: Spar
       stopped: "none",
       lines: plan.skipped.length
         ? plan.skipped.map((item) => ({ ...item, status: "skipped" as const }))
-        : [{ uid: "", name: "", status: "skipped", detail: "勾选的人里没有能发的单聊" }]
+        : [{ uid: "", name: "", status: "skipped", detail: "勾选的会话里没有能发的" }]
     }
   }
   const sent = await deliverRows(guest, profile, plan.ready)
@@ -184,10 +184,10 @@ async function deliverRows(guest: Guest, profile: ProfileView, targets: SparkRow
       )
       const payload = await postProto(guest, SEND_URL, body)
       explainSendResponse(payload)
-      lines.push({ uid: row.peerUid, name: row.name, status: "sent", detail: "互动表情已交给聊天页" })
+      lines.push({ uid: selectId(row), name: row.name, status: "sent", detail: "互动表情已交给聊天页" })
     } catch (error) {
       const detail = error instanceof Error ? error.message : "发送失败"
-      lines.push({ uid: row.peerUid, name: row.name, status: "failed", detail })
+      lines.push({ uid: selectId(row), name: row.name, status: "failed", detail })
       if (detail.includes("decision=KICK")) {
         return { stopped: "kick", lines }
       }

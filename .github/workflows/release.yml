@@ -52,8 +52,8 @@ jobs:
         with:
           files: |
             release/*.exe
-            release/*.blockmap
-            release/*.yml
+            release/*.exe.blockmap
+            release/latest.yml
           generate_release_notes: true
           body: |
             Windows installer and portable build for this tag.

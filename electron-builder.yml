@@ -1,0 +1,67 @@
+appId: com.ninthless.ember
+productName: Ember
+npmRebuild: false
+publish:
+  provider: github
+  owner: Ninthless
+  repo: Ember
+directories:
+  output: release
+  buildResources: resources
+files:
+  - out/**/*
+  - package.json
+  - "!**/*.map"
+asar: true
+win:
+  executableName: Ember
+  icon: resources/icon.ico
+  signAndEditExecutable: true
+  signExecutable: false
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  artifactName: Ember-Setup.${ext}
+  shortcutName: Ember
+  uninstallDisplayName: Ember
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+portable:
+  artifactName: Ember-portable.${ext}
+mac:
+  identity: null
+  icon: resources/icon.png
+  category: public.app-category.social-networking
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+    - target: zip
+      arch:
+        - arm64
+        - x64
+  artifactName: Ember-${arch}.${ext}
+dmg:
+  title: Ember ${version}
+linux:
+  icon: resources/icon.png
+  category: Network
+  executableName: ember
+  synopsis: Keep Douyin private-chat sparks going
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+  artifactName: Ember-x64.${ext}
